@@ -1,106 +1,99 @@
 require 'socket'
+require '../rubyHangingmanTCP/Word'
+require '../rubyHangingmanTCP/Hangman'
 
-def commands(command, s)
-  case command
-  when "help"
-    print "options: \n exit: to exit the game \n rules: for rules \n credits: show credits\n"
-  when "rules"
-    print "Type one letter to guess a letter of the word. \nType two or more letters to guess the word\n"
-  when "credits"
-    print "hangman ASCII art from: https://gist.github.com/chrishorton/8510732aa9a80a03c829b09f12e20d9c \n"
-  else
-    if command.length == 1
-      s.puts command
+class Client
+  def initialize
+    #connect to server
+    begin
+      @server = TCPSocket.new 'localhost', 2000
+      @count = 0
+    rescue
+      abort 'Cant connect to server.'
     end
   end
-end
 
-#listen in background for start command
-def listen(s)
-  usedLetters = Array.new
-
-  while true
-    stop = s.recv(1024)
-    case stop.to_s
-    when ":start"
-      puts stop
-      break
-    when ":GameOver"
-      puts "GAME OVER"
+  def commands(command)
+    case command
+    when "help"
+      print "options: \n exit: to exit the game \n rules: for rules \n credits: show credits\n"
+    when "rules"
+      print "Type one letter to guess a letter of the word. \nType two or more letters to guess the word\n"
+    when "credits"
+      print "hangman ASCII art from: https://gist.github.com/chrishorton/8510732aa9a80a03c829b09f12e20d9c \n"
     else
-      if stop.length == 1
-        usedLetters.push(stop)
+      @server.puts command
+    end
+  end
+
+#listen in background for commands
+  def listen
+    hangman = Hangman.new
+    loop do
+      stop = @server.recv(1024)
+
+      case stop.chomp.to_s
+      when ":start"
+        puts stop
+        break
+      when ":gameover"
+        puts stop
+        puts "GAME OVER"
+        break
+      when ":count"
+        puts stop
+        puts hangman.getHangman(@count)
+        print ">"
+      else
+        puts stop
+        print ">"
       end
-      puts stop.to_s
+    end
+    false
+  end
+
+  def start
+    puts "enter a username:"
+    name = gets.chomp #chomp of the enter
+    @server.puts name
+    data = @server.recv(1024)
+    puts data
+    case data.chomp.to_s
+    when ":start"
+      lobby("Await your turn")
+    when ":wait"
+      lobby
+    else
+      puts "no reaction from server"
+      #todo fix username thread on server for retry
+    end
+  end
+
+  def input
+    loop do
       print ">"
+      command = gets.chomp
+      commands(command)
     end
   end
-  false
-end
 
-def username(s)
-  puts "enter a username:"
-  name = gets.chomp #chomp of the enter
-  s.puts name
-  data = s.recv(1024)
-  puts data
-  sleep(1)
-  # puts data
-  case data.chomp.to_s
-  when ":start"
-    game(s)
-  when ":wait"
-    lobby(s)
-  else
-    puts "no reaction from server"
-    #   #todo fix username thread on server for retry
-  end
-end
+  def lobby(text = "waiting for other players")
+    puts text
 
-def input(s)
-  while true
-    print ">"
-    command = gets.chomp
-    commands(command, s)
-  end
-end
-
-def game(s)
-  puts "Started Game"
-  t = Thread.new { Thread.current[:output] = listen(s) }
-  i = Thread.new { Thread.current[:output] = input(s) }
-  while true
-    if t.status == false
-      t.kill
-      # i.kill
-      break
+    t = Thread.new { Thread.current[:output] = listen }
+    i = Thread.new { Thread.current[:output] = input }
+    loop do
+      if t.status == false
+        t.kill
+        i.kill
+        break
+      end
     end
+    lobby
   end
 end
 
-def lobby(s)
-  puts "waiting for other players"
-
-  t = Thread.new { Thread.current[:output] = listen(s) }
-  i = Thread.new { Thread.current[:output] = input(s) }
-  while true
-    if t.status == false
-      t.kill
-      i.kill
-      break
-    end
-  end
-  game(s)
-end
-
-#connect to server
-begin
-  s = TCPSocket.new 'localhost', 2000
-rescue
-  abort 'Cant connect to server.'
-end
-
-username(s)
-
-s.close # close socket when done
+c = Client.new
+c.start
+# close socket when done
 

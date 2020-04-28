@@ -1,50 +1,10 @@
 require 'socket'
-
-class Word
-  require 'net/http'
-  require 'json'
-
-  def initialize
-    # @word = getWordFromApi
-    @word = %w[b o r]
-    @guess = Array.new
-  end
-
-  def getGuess
-    @guess
-  end
-
-  def getWordFromApi
-    url = 'https://random-word-api.herokuapp.com/word?number=1'
-    uri = URI(url)
-    response = Net::HTTP.get(uri)
-    data = JSON.parse(response)
-    data[0].split("")
-  end
-
-  def checkCharacter(character)
-    puts @word
-    puts character
-    @word.each_with_index do |letter, i|
-      if letter == character.to_s
-        @guess[i] = character
-        puts @guess.to_s
-
-        if @guess == @word
-          puts "GAME END"
-          return true
-        end
-      end
-    end
-    false
-  end
-end
+require '../rubyHangingmanTCP/Word'
 
 class Server
   def initialize(port, ip)
     @server = TCPServer.open(ip, port)
     @connections = Hash.new
-    @rooms = Hash.new
     @clients = Hash.new
     @connections[:server] = @server
     @connections[:clients] = @clients
@@ -76,31 +36,31 @@ class Server
     }.join
   end
 
-  def endGame
+  def send_to_all(message)
     @connections[:clients].each do |name, player|
-      puts name
-      player.puts(":GameOver")
+      player.puts(message)
     end
   end
 
   def listen_user_guess
     word = Word.new
-    @connections[:clients].each do |name, player|
-      puts name
-      player.puts(":start")
-    end
+    send_to_all(":start")
     loop {
       @connections[:clients].each do |name, player|
-        player.puts("ENTER A LETTER TO GUESS #{name} \n word: #{word.getGuess}")
-        print name.to_s + "   "
+        player.puts("ENTER A LETTER TO GUESS #{name} \n word: #{word.get_guess} \n USED LETTERS:#{word.get_used_letters}")
         character = player.gets.chomp.to_sym
         print character.to_s + "\n"
-        status = word.checkCharacter(character.to_s)
-        if status
-          endGame
+        check_character = word.check_character(character.to_s)
+        check_word = word.check_word(character.to_s)
+        if check_character || check_word || word.get_lives == 7
+          send_to_all(":gameover")
+          send_to_all("#{name} guessed the word!!!")
+          send_to_all(":count")
           break
         end
-        player.puts("Await your turn \n #{word.getGuess}")
+        word.add_to_list(character)
+        send_to_all(":count")
+        player.puts("Await your turn \n WORD: #{word.get_guess}")
       end
     }
   end
