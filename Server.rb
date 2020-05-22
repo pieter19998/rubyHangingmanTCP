@@ -8,6 +8,7 @@ class Server
     @clients = Hash.new
     @connections[:server] = @server
     @connections[:clients] = @clients
+    puts "listening on #{ip}:#{port}"
     run
   end
 
@@ -38,6 +39,7 @@ class Server
 
   def send_to_all(message)
     @connections[:clients].each do |name, player|
+      puts "send to #{player}"
       player.puts(message)
     end
   end
@@ -52,15 +54,21 @@ class Server
         print character.to_s + "\n"
         check_character = word.check_character(character.to_s)
         check_word = word.check_word(character.to_s)
-        if check_character || check_word || word.get_lives == 7
+        if check_character || check_word
           send_to_all(":gameover")
           send_to_all("#{name} guessed the word!!!")
-          send_to_all(":count")
           break
+        end
+        if word.get_lives == 7
+          send_to_all(":count")
+          send_to_all(":gameover")
+          exit
         end
         word.add_to_list(character)
         send_to_all(":count")
         player.puts("Await your turn \n WORD: #{word.get_guess}")
+        word.update_lives
+        puts word.get_lives
       end
     }
   end

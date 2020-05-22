@@ -6,7 +6,7 @@ class Word
     # @word = get_word_api
     @word = %w[b o r]
     @guess = Array.new
-    @lives = -1
+    @lives = 0
     @used_letters = Array.new
   end
 
@@ -15,7 +15,7 @@ class Word
   end
 
   def get_lives
-    @lives = @lives + 1
+    @lives
   end
 
   def update_lives

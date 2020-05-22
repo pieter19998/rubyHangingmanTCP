@@ -7,7 +7,7 @@ class Client
     #connect to server
     begin
       @server = TCPSocket.new 'localhost', 2000
-      @count = 0
+      @count = -1
     rescue
       abort 'Cant connect to server.'
     end
@@ -39,9 +39,10 @@ class Client
       when ":gameover"
         puts stop
         puts "GAME OVER"
-        break
+        exit
       when ":count"
         puts stop
+        @count = @count+1
         puts hangman.getHangman(@count)
         print ">"
       else
@@ -65,7 +66,6 @@ class Client
       lobby
     else
       puts "no reaction from server"
-      #todo fix username thread on server for retry
     end
   end
 
