@@ -47,6 +47,8 @@ class Server
   def listen_user_guess
     word = Word.new
     send_to_all(":start")
+    sleep(1)
+    send_to_all("Word length is #{word.get_length}")
     loop {
       @connections[:clients].each do |name, player|
         player.puts("ENTER A LETTER TO GUESS #{name} \n word: #{word.get_guess} \n USED LETTERS:#{word.get_used_letters}")

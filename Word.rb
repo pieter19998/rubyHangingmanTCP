@@ -8,11 +8,17 @@ class Word
     @guess = Array.new
     @lives = 0
     @used_letters = Array.new
+    @word_length = @word.length
   end
 
   def get_guess
     @guess
   end
+
+  def get_length
+    @word_length
+  end
+
 
   def get_lives
     @lives
